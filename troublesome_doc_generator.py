@@ -122,11 +122,11 @@ def generate_c(doc_info: DocInfo):
     # 파일에서 값 찾아 치환
     for paragraph in docx.paragraphs:
         if "AAA" in paragraph.text:
-            paragraph.text = paragraph.text.replace("AAA", doc_info.developer)
+            paragraph.text = paragraph.text.replace(paragraph.text, doc_info.developer)
         if "BBB" in paragraph.text:
-            paragraph.text = paragraph.text.replace("BBB", doc_info.author)
+            paragraph.text = paragraph.text.replace(paragraph.text, doc_info.author)
         if "CCC" in paragraph.text:
-            paragraph.text = paragraph.text.replace("CCC", doc_info.approver)
+            paragraph.text = paragraph.text.replace(paragraph.text, doc_info.approver)
 
     # 파일 저장
     docx.save(f"{generated_doc_path}/{test_docx_file}")
