@@ -1,17 +1,8 @@
 import os
+import config
 import openpyxl
 from docx import Document
 
-# 현재 스크립트 파일 경로 가져오기
-project_path = os.path.dirname(os.path.abspath(__file__))
-doc_path = f"{project_path}/doc"
-generated_doc_path = f"{project_path}/generated_doc"
-
-# 파일명
-base_info_file_name = "0000_base_info_file.xlsx"
-test_excel_file = "0100_test_excel_file.xlsx"
-test_docx_file = "0500_test_docx_file.docx"
- 
 # ====================================================================================================================================================================================================================================================================================
 
 class DocInfo:
@@ -42,7 +33,7 @@ def create_directory(directory_path):
 
 def get_doc_info() -> DocInfo:
     # 엑셀 파일 읽기
-    excel_path = f"{doc_path}/{base_info_file_name}"
+    excel_path = f"{config.doc_path}/{config.base_info_file_name}"
     wb = openpyxl.load_workbook(excel_path)
     sheet = wb.active
 
@@ -89,7 +80,7 @@ def get_developer_test_infos(sheet, approver) -> list[DeveloperTestInfo]:
 
 def generate_b(doc_info: DocInfo):
     # 엑셀 파일 읽기
-    excel_path = f"{doc_path}/{test_excel_file}"
+    excel_path = f"{config.doc_path}/{config.test_excel_file}"
     wb = openpyxl.load_workbook(excel_path)
     b_sheet = wb['BBB']  # BBB 탭 선택
 
@@ -109,14 +100,14 @@ def generate_b(doc_info: DocInfo):
         c_sheet.cell(row=row_index, column=7, value=doc_info.complete_dev_date)
     
     # 파일 저장
-    wb.save(f"{generated_doc_path}/{test_excel_file}")
+    wb.save(f"{config.generated_doc_path}/{config.test_excel_file}")
     
     # 파일 닫기
     wb.close()
     
 def generate_c(doc_info: DocInfo):
     # docx 파일 읽기
-    docx_path = f"{doc_path}/{test_docx_file}"
+    docx_path = f"{config.doc_path}/{config.test_docx_file}"
     docx = Document(docx_path)
 
     # 파일에서 값 찾아 치환
@@ -129,13 +120,13 @@ def generate_c(doc_info: DocInfo):
             paragraph.text = paragraph.text.replace(paragraph.text, doc_info.approver)
 
     # 파일 저장
-    docx.save(f"{generated_doc_path}/{test_docx_file}")
+    docx.save(f"{config.generated_doc_path}/{config.test_docx_file}")
     
 # ====================================================================================================================================================================================================================================================================================
 
 if __name__ == "__main__":
     # 생성된 파일 저장할 폴더 생성
-    create_directory(generated_doc_path)
+    create_directory(config.generated_doc_path)
 
     # 기본 정보 가져오기
     doc_info = get_doc_info()
