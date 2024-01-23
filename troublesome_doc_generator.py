@@ -1,21 +1,11 @@
 import os
 import config
 import openpyxl
+import datetime
 from docx import Document
 
 # ====================================================================================================================================================================================================================================================================================
 
-class DocInfo:
-    def __init__(self, sr_title, sr_no, developer, author, approver, complete_dev_date, deploy_date, developer_test_infos):
-        self.sr_title = sr_title
-        self.sr_no = sr_no
-        self.developer = developer
-        self.author = author
-        self.approver = approver
-        self.complete_dev_date = complete_dev_date
-        self.deploy_date = deploy_date
-        self.developer_test_infos = developer_test_infos
-        
 class DeveloperTestInfo:
     def __init__(self, test_content, developer, approver):
         self.test_content = test_content
@@ -31,108 +21,164 @@ def create_directory(directory_path):
     else:
         print(f"'{directory_path}' 이미 존재")
 
-def get_doc_info() -> DocInfo:
-    # 엑셀 파일 읽기
-    excel_path = f"{config.doc_path}/{config.base_info_file_name}"
-    wb = openpyxl.load_workbook(excel_path)
+def get_file_names() -> list[str]:
+    wb = openpyxl.load_workbook(f"{config.doc_path}/{config.base_info_file_name}")
     sheet = wb.active
 
-    # 값 가져오기
-    sr_title = sheet['B2'].value
-    sr_no = sheet['B3'].value
-    developer = sheet['B8'].value
-    author = sheet['B9'].value
-    approver = sheet['B10'].value
-    complete_dev_date = sheet['E2'].value
-    deploy_date = sheet['E3'].value
-    developer_test_infos = get_developer_test_infos(sheet, approver)
-    doc_info = DocInfo(sr_title, sr_no, developer, author, approver, complete_dev_date, deploy_date, developer_test_infos)
-    
+    # 컬럼 데이터 읽기
+    a_column = sheet['A']
+
+    # 데이터를 저장할 리스트 초기화
+    file_names = []
+
+    # 열의 길이 중 작은 길이까지만 반복
+    for a_cell in a_column[2:]: # 3행부터 테스트 데이터들 존재
+        # 둘 중 하나라도 값이 비어 있으면 반복 종료
+        if a_cell.value is None:
+            break
+
+        # DeveloperTestInfo 객체 생성 후 데이터 리스트에 추가
+        file_names.append(a_cell.value)
+
     # 파일 닫기
     wb.close()
     
-    return doc_info
+    return file_names
 
-def get_developer_test_infos(sheet, approver) -> list[DeveloperTestInfo]:
-    try:
-        # g열과 h열의 데이터 읽기
-        g_column = sheet['G']
-        h_column = sheet['H']
+def get_values() -> dict[str, str]:
+    wb = openpyxl.load_workbook(f"{config.doc_path}/{config.base_info_file_name}")
+    sheet = wb.active
+    
+    data_map = {}
 
-        # 데이터를 저장할 리스트 초기화
-        data_list = []
+    # 3행부터 데이터 읽기
+    for row in sheet.iter_rows(min_row=3, values_only=True):
+        data_e = row[4]  # E열 데이터 (0부터 시작하므로 5열에 해당)
+        data_g = row[5]  # F열 데이터
 
-        # 열의 길이 중 작은 길이까지만 반복
-        # for g_cell, h_cell in zip(g_column, h_column):
-        for g_cell, h_cell in zip(g_column[1:], h_column[1:]): # 2행부터 테스트 데이터들 존재. 2행부터 데이터 읽기
-            # 둘 중 하나라도 값이 비어 있으면 반복 종료
-            if g_cell.value is None or h_cell.value is None:
-                break
+        # 데이터가 비어있으면 중단
+        if data_e is None or data_g is None:
+            break
 
-            # DeveloperTestInfo 객체 생성 후 데이터 리스트에 추가
-            data_list.append(DeveloperTestInfo(test_content=g_cell.value, developer=h_cell.value, approver=approver))
+        # 딕셔너리에 데이터 추가
+        data_map[data_e] = data_g
 
-        return data_list
+    # 파일 닫기
+    wb.close()
 
-    except Exception as e:
-        print(f"Error reading Excel file: {e}")
-        return None
+    return data_map
 
-def generate_b(doc_info: DocInfo):
-    # 엑셀 파일 읽기
-    excel_path = f"{config.doc_path}/{config.test_excel_file}"
+def get_developer_test_infos() -> list[DeveloperTestInfo]:
+    wb = openpyxl.load_workbook(f"{config.doc_path}/{config.base_info_file_name}")
+    sheet = wb.active
+    
+    content_column = sheet['I']
+    developer_column = sheet['J']
+
+    datas = []
+
+    # 열의 길이 중 작은 길이까지만 반복
+    for content_cell, developer_cell in zip(content_column[2:], developer_column[2:]): # 3행부터 읽기
+        # 둘 중 하나라도 값이 비어 있으면 반복 종료
+        if content_cell.value is None or developer_cell.value is None:
+            break
+
+        # DeveloperTestInfo 객체 생성 후 데이터 리스트에 추가
+        datas.append(DeveloperTestInfo(test_content=content_cell.value, developer=developer_cell.value, approver="권확인자"))
+
+    return datas
+
+def generate_excel(file_name: str, values: dict[str, str], developer_test_infos: list[DeveloperTestInfo]):
+    excel_path = f"{config.doc_path}/{file_name}"
     wb = openpyxl.load_workbook(excel_path)
-    b_sheet = wb['BBB']  # BBB 탭 선택
-
-    # 값 채우기
-    b_sheet['A1'] = doc_info.sr_title
-    b_sheet['A2'] = doc_info.sr_no
-    b_sheet['A4'] = doc_info.developer
-    b_sheet['B6'] = doc_info.author
-    b_sheet['C10'] = doc_info.approver
     
-    # 데이터를 D5셀부터 채우기
-    c_sheet = wb['CCC']  # CCC 탭 선택
-    for row_index, test_info in enumerate(doc_info.developer_test_infos, start=4):  # 엑셀은 1부터 시작하지만, 리스트는 0부터 시작하므로 4부터 시작
-        c_sheet.cell(row=row_index, column=4, value=test_info.test_content)
-        c_sheet.cell(row=row_index, column=5, value=test_info.developer)
-        c_sheet.cell(row=row_index, column=6, value=test_info.approver)
-        c_sheet.cell(row=row_index, column=7, value=doc_info.complete_dev_date)
-    
+    # 모든 시트에 대해 반복
+    for sheet_name in wb.sheetnames:
+        sheet = wb[sheet_name]
+        
+        # # 시트 내의 모든 행에 대해 반복
+        # for row in sheet.iter_rows(min_row=1, max_row=sheet.max_row, min_col=1, max_col=sheet.max_column):
+        #     for cell in row:
+        #         # 셀의 값이 딕셔너리의 키에 해당하는 경우, 값을 딕셔너리의 값으로 업데이트
+        #         if cell.value in values:
+        #             cell.value = values[cell.value]
+        
+        # # 시트 내의 모든 행에 대해 반복
+        for row_index, row in enumerate(sheet.iter_rows(min_row=1, max_row=sheet.max_row, min_col=1, max_col=sheet.max_column)):
+            for col_index, cell in enumerate(row):
+                # 셀의 값이 딕셔너리의 키에 해당하는 경우, 값을 딕셔너리의 값으로 업데이트
+                if cell.value in values:
+                    cell.value = values[cell.value]
+                
+                # 테스트 데이터 업데이트
+                if cell.value == "{testData}":
+                    for test_info_row_index, test_info in enumerate(developer_test_infos, start=4):
+                        sheet.cell(row=test_info_row_index+1, column=col_index+1, value=test_info.test_content)
+                        sheet.cell(row=test_info_row_index+1, column=col_index+2, value=test_info.developer)
+                        # sheet.cell(row=test_info_row_index+1, column=col_index+3, value=todo)
+                        # sheet.cell(row=test_info_row_index+1, column=col_index+4, value=todo)
+                        
     # 파일 저장
-    wb.save(f"{config.generated_doc_path}/{config.test_excel_file}")
+    wb.save(f"{config.generated_doc_path}/{file_name}")
     
     # 파일 닫기
     wb.close()
     
-def generate_c(doc_info: DocInfo):
-    # docx 파일 읽기
-    docx_path = f"{config.doc_path}/{config.test_docx_file}"
+def generate_docx(file_name: str, values: dict[str, str]):
+    docx_path = f"{config.doc_path}/{file_name}"
     docx = Document(docx_path)
 
-    # 파일에서 값 찾아 치환
-    for paragraph in docx.paragraphs:
-        if "AAA" in paragraph.text:
-            paragraph.text = paragraph.text.replace(paragraph.text, doc_info.developer)
-        if "BBB" in paragraph.text:
-            paragraph.text = paragraph.text.replace(paragraph.text, doc_info.author)
-        if "CCC" in paragraph.text:
-            paragraph.text = paragraph.text.replace(paragraph.text, doc_info.approver)
+    # 모든 단락에 대해 반복
+    for para in docx.paragraphs:
+        # 단락 내에서 딕셔너리의 키를 찾아서 값을 딕셔너리의 값으로 업데이트
+        for key, value in values.items():
+            # value가 date 타입이면 string 으로 변경
+            if isinstance(value, datetime.date):
+                value = value.strftime("%Y-%m-%d")
+            para.text = para.text.replace(key, value)
 
     # 파일 저장
-    docx.save(f"{config.generated_doc_path}/{config.test_docx_file}")
+    docx.save(f"{config.generated_doc_path}/{file_name}")
     
 # ====================================================================================================================================================================================================================================================================================
 
 if __name__ == "__main__":
-    # 생성된 파일 저장할 폴더 생성
+    # 파일명 리스트 가져오기
+    file_names = get_file_names()
+    for file_name in file_names:
+        print(f'파일명 : {file_name}')
+    
+    print("===================================================")
+
+    # 변수 맵 가져오기
+    values = get_values()
+    for key, value in values.items():
+        print(f'변수명 : {key}, 데이터 : {value}')
+        
+    print("===================================================")
+    
+    # 테스트 문서 데이터 가져오기
+    developer_test_infos = get_developer_test_infos()
+    for developer_test_info in developer_test_infos:
+        print(f'테스트내용 : {developer_test_info.test_content}, 개발자명 : {developer_test_info.developer}')
+        
+    print("===================================================")
+    
+    # 생성 파일 저장할 폴더 생성
     create_directory(config.generated_doc_path)
-
-    # 기본 정보 가져오기
-    doc_info = get_doc_info()
-
-    # 엑셀 파일 생성
-    generate_b(doc_info)
-
-    # docx 파일 생성
-    generate_c(doc_info)
+    
+    # 파일 생성
+    for file_name in file_names:
+        if file_name.endswith(".xlsx"):
+            # 엑셀 파일 생성
+            generate_excel(file_name, values, developer_test_infos)
+        elif file_name.endswith(".docx"):
+            # 워드 파일 생성
+            generate_docx(file_name, values) 
+            
+            
+            
+            
+            
+            
+            
