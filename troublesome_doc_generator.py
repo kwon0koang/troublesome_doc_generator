@@ -36,8 +36,7 @@ def get_file_names() -> list[str]:
         # 둘 중 하나라도 값이 비어 있으면 반복 종료
         if a_cell.value is None:
             break
-
-        # DeveloperTestInfo 객체 생성 후 데이터 리스트에 추가
+        
         file_names.append(a_cell.value)
 
     # 파일 닫기
@@ -53,15 +52,15 @@ def get_values() -> dict[str, str]:
 
     # 3행부터 데이터 읽기
     for row in sheet.iter_rows(min_row=3, values_only=True):
-        data_e = row[4]  # E열 데이터 (0부터 시작하므로 5열에 해당)
-        data_g = row[5]  # F열 데이터
+        key = row[4]  # 키 (0부터 시작하므로 5열에 해당)
+        data = row[5]  # 데이터
 
         # 데이터가 비어있으면 중단
-        if data_e is None or data_g is None:
+        if key is None or data is None:
             break
 
         # 딕셔너리에 데이터 추가
-        data_map[data_e] = data_g
+        data_map[key] = data
 
     # 파일 닫기
     wb.close()
@@ -83,7 +82,6 @@ def get_developer_test_infos() -> list[DeveloperTestInfo]:
         if content_cell.value is None or developer_cell.value is None:
             break
 
-        # DeveloperTestInfo 객체 생성 후 데이터 리스트에 추가
         datas.append(DeveloperTestInfo(test_content=content_cell.value, developer=developer_cell.value, approver="권확인자"))
 
     return datas
@@ -102,8 +100,7 @@ def generate_excel(file_name: str, values: dict[str, str], developer_test_infos:
         #         # 셀의 값이 딕셔너리의 키에 해당하는 경우, 값을 딕셔너리의 값으로 업데이트
         #         if cell.value in values:
         #             cell.value = values[cell.value]
-        
-        # # 시트 내의 모든 행에 대해 반복
+        # 시트 내의 모든 행에 대해 반복
         for row_index, row in enumerate(sheet.iter_rows(min_row=1, max_row=sheet.max_row, min_col=1, max_col=sheet.max_column)):
             for col_index, cell in enumerate(row):
                 # 셀의 값이 딕셔너리의 키에 해당하는 경우, 값을 딕셔너리의 값으로 업데이트
