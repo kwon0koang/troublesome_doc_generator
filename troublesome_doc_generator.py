@@ -109,9 +109,14 @@ def generate_excel(file_name: str, values: dict[str, str], developer_test_infos:
                 
                 # 테스트 데이터 업데이트
                 if cell.value == "{testData}":
-                    for test_info_row_index, test_info in enumerate(developer_test_infos, start=4):
-                        sheet.cell(row=test_info_row_index+1, column=col_index+1, value=test_info.test_content)
-                        sheet.cell(row=test_info_row_index+1, column=col_index+2, value=test_info.developer)
+                    # 테스트 문서 데이터 가져오기
+                    # developer_test_infos = get_developer_test_infos()
+                    # for developer_test_info in developer_test_infos:
+                    #     print(f'테스트내용 : {developer_test_info.test_content}, 개발자명 : {developer_test_info.developer}')
+                    
+                    for test_info_row_index, test_info in enumerate(developer_test_infos):
+                        sheet.cell(row=row_index+test_info_row_index+1, column=col_index+1, value=test_info.test_content)
+                        sheet.cell(row=row_index+test_info_row_index+1, column=col_index+2, value=test_info.developer)
                         # sheet.cell(row=test_info_row_index+1, column=col_index+3, value=todo)
                         # sheet.cell(row=test_info_row_index+1, column=col_index+4, value=todo)
                         
@@ -125,7 +130,7 @@ def generate_docx(file_name: str, values: dict[str, str]):
     docx_path = f"{config.doc_path}/{file_name}"
     docx = Document(docx_path)
 
-    # 모든 단락에 대해 반복
+    # 단락 반복
     for para in docx.paragraphs:
         # 단락 내에서 딕셔너리의 키를 찾아서 값을 딕셔너리의 값으로 업데이트
         for key, value in values.items():
@@ -133,6 +138,15 @@ def generate_docx(file_name: str, values: dict[str, str]):
             if isinstance(value, datetime.date):
                 value = value.strftime("%Y-%m-%d")
             para.text = para.text.replace(key, value)
+
+    # 테이블 반복
+    for table in docx.tables:
+        for row in table.rows:
+            for cell in row.cells:
+                for key, value in values.items():
+                    if isinstance(value, datetime.date):
+                        value = value.strftime("%Y-%m-%d")
+                    cell.text = cell.text.replace(key, value)
 
     # 파일 저장
     docx.save(f"{config.generated_doc_path}/{file_name}")
